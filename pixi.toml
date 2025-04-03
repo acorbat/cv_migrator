@@ -1,0 +1,12 @@
+[project]
+authors = ["Agustin Corbat <agustin.corbat@gmail.com>"]
+channels = ["conda-forge"]
+name = "cv_migrator"
+platforms = ["win-64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+python = ">=3.13.2,<3.14"
+pyyaml = ">=6.0.2,<7"
