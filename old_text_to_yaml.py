@@ -21,9 +21,14 @@ def convert_tex_to_yaml(filepath: Path):
     for line in lines_iterator:
         if line.startswith(r"\section"):
             section_name = line.split("{")[1].split("}")[0]
+            subsection_name = ''
             content_dict[section_name] = {}
             continue
         
+        if line.startswith(r"\subsection"):
+            subsection_name = line.split("{")[1].split("}")[0]
+            continue
+
         if line.startswith(r"\cventry"):
             parts = line.split("{")[1:]
             parts = [part.split("}")[0] for part in parts]
@@ -32,10 +37,18 @@ def convert_tex_to_yaml(filepath: Path):
                 parts.append(line)
             
             parts = list(filter(None, parts))
+
             if section_name == "Education" or section_name == "Educación":
                 title, content_to_save = parse_education(parts)
                 content_dict[section_name][title] = content_to_save
                 continue
+
+            if section_name == "Experience" or section_name == "Experiencia":
+                if subsection_name and subsection_name == "Teaching and Mentoring Experience" or subsection_name == "Docencia y Formación":
+                    title, content_to_save = parse_education(parts)
+                    content_dict[section_name][title] = content_to_save
+                    continue
+                    
 
             if len(parts) >= 4:
                 date, title, location, description = parts[:4]
