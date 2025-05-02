@@ -12,6 +12,7 @@ def convert_tex_to_yaml(filepath: Path):
             line = latex_bold_to_markdown(line.strip())
             line = latex_italics_to_markdown(line.strip())
             line = latex_underline_to_markdown(line.strip())
+            line = latex_superscript_to_markdown(line.strip())
             yield line.strip()
     
     # Process the lines to extract key-value pairs
@@ -52,9 +53,16 @@ def convert_tex_to_yaml(filepath: Path):
                 
             elif section_name == "Production" or section_name == "Producción":
                 if subsection_name and subsection_name == "Publications" or subsection_name == "Publicaciones":
-                    title, content_to_save = parse_publications(parts)
+                    title, content_to_save = parse_publication(parts)
                 elif subsection_name and subsection_name == "Posters and Oral Presentations" or subsection_name == "Posters y Presentaciones Orales":
-                    title, content_to_save = parse_posters(parts)
+                    title, content_to_save = parse_poster(parts)
+                elif subsection_name and subsection_name == "Outreach Experience" or subsection_name == "Divulgación Científica":
+                    title, content_to_save = parse_poster(parts)
+                else:
+                    title, content_to_save = parse_education(parts)
+
+            elif section_name == "Participation in Conferences and Schools" or section_name == "Cursos y Congresos":
+                title, content_to_save = parse_course(parts)
                 
             elif len(parts) >= 4:
                 date, title, location, description = parts[:4]
@@ -118,7 +126,7 @@ def latex_underline_to_markdown(latex_text: str) -> str:
 
 def latex_italics_to_markdown(latex_text: str) -> str:
     """
-    Replaces LaTeX italics font commands (\textbf{...}) with Markdown italics font syntax (**...**).
+    Replaces LaTeX italics font commands (\textbf{...}) with Markdown italics font syntax (*...*).
 
     Args:
         latex_text: The LaTeX text string.
@@ -127,6 +135,20 @@ def latex_italics_to_markdown(latex_text: str) -> str:
         The Markdown text string with italics fonts converted.
     """
     markdown_text = re.sub(r'\\textit\{(.*?)\}', r'*\1*', latex_text)
+    return markdown_text
+
+
+def latex_superscript_to_markdown(latex_text: str) -> str:
+    """
+    Replaces LaTeX superscript font commands (\textbf{...}) with Markdown superscript font syntax (^...^).
+
+    Args:
+        latex_text: The LaTeX text string.
+
+    Returns:
+        The Markdown text string with superscript fonts converted.
+    """
+    markdown_text = re.sub(r'\$\^\{(.*?)\}\$', r'^\1^', latex_text)
     return markdown_text
 
 
@@ -161,7 +183,7 @@ def parse_education(parts):
     return title, content
 
 
-def parse_publications(parts):
+def parse_publication(parts):
     """
     Parses the publications subsection from the LaTeX entry.
 
@@ -186,7 +208,7 @@ def parse_publications(parts):
     return title, content
 
 
-def parse_posters(parts):
+def parse_poster(parts):
     """
     Parses the posters subsection from the LaTeX entry.
 
@@ -203,6 +225,40 @@ def parse_posters(parts):
             "event": event.strip(),
             "authors": authors.strip(),
             "description": parts[4:] if len(parts) > 4 else [],
+        }
+    else:
+        print("Error: Unexpected number of parts in education entry.")
+        print(parts)
+        raise ValueError("Unexpected number of parts in education entry.")
+    return title, content
+
+
+def parse_course(parts):
+    """
+    Parses the courses subsection from the LaTeX entry.
+
+    Args:
+        parts: The parts of the LaTeX entry.
+
+    Returns:
+        A tuple containing the title and content to save.
+    """
+    if len(parts) >= 5:
+        date, title, extension, location, language = parts[:5]
+        content = {
+            "date": date.strip(),
+            "extension": extension.strip(),
+            "location": location.strip(),
+            "language": language.lstrip("Language: ").lstrip("Idioma: ").strip(),
+            "description": parts[5:] if len(parts) > 5 else [],
+        }
+    elif len(parts) == 4:
+        date, title, extension, location = parts[:5]
+        content = {
+            "date": date.strip(),
+            "extension": extension.strip(),
+            "location": location.strip(),
+            "description": parts[5:] if len(parts) > 5 else [],
         }
     else:
         print("Error: Unexpected number of parts in education entry.")
