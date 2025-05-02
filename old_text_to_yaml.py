@@ -48,7 +48,12 @@ def convert_tex_to_yaml(filepath: Path):
                     title, content_to_save = parse_education(parts)
                     content_dict[section_name][title] = content_to_save
                     continue
-                    
+            
+            if section_name == "Production" or section_name == "Producción":
+                if subsection_name and subsection_name == "Publications" or subsection_name == "Publicaciones":
+                    title, content_to_save = parse_publications(parts)
+                    content_dict[section_name][title] = content_to_save
+                    continue
 
             if len(parts) >= 4:
                 date, title, location, description = parts[:4]
@@ -142,6 +147,31 @@ def parse_education(parts):
             "date": date.strip(),
             "location": location.strip(),
             "description": parts[2],
+        }
+    else:
+        print("Error: Unexpected number of parts in education entry.")
+        print(parts)
+        raise ValueError("Unexpected number of parts in education entry.")
+    return title, content
+
+
+def parse_publications(parts):
+    """
+    Parses the publications subsection from the LaTeX entry.
+
+    Args:
+        parts: The parts of the LaTeX entry.
+
+    Returns:
+        A tuple containing the title and content to save.
+    """
+    if len(parts) >= 4:
+        date, title, journal, authors = parts[:4]
+        content = {
+            "date": date.strip(),
+            "journal": journal.strip(),
+            "authors": authors.strip(),
+            "description": parts[4:] if len(parts) > 4 else [],
         }
     else:
         print("Error: Unexpected number of parts in education entry.")
