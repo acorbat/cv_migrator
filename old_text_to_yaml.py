@@ -20,6 +20,27 @@ def convert_tex_to_yaml(filepath: Path):
     lines_iterator = make_lines_iterator()
     section_name = ''
     for line in lines_iterator:
+        if line.startswith(r"\title"):
+            title = line.split("{")[1].split("}")[0]
+            if title == "Curriculum Vitae":
+                continue
+            elif title == "University Transcript" or title == "Resumen de Certificado Analítico":
+                for line in lines_iterator:
+                    if line.startswith(r"\section"):
+                        section_name = line.split("{")[1].split("}")[0]
+                        content_dict[section_name] = {}
+                    
+                    if line.startswith("\\") or line.startswith("Assignment") or line.startswith("Asignatura") or line == "" or line.startswith("%"):
+                        continue
+                    
+                    parts = line.rstrip("\\ \\hline").split("&")
+                    assignment = parts[0].strip()
+                    grade = parts[1].strip()
+                    content_dict[section_name][assignment.strip()] = {"grade": grade.strip()}
+                    if len(parts) == 3:
+                        content_dict[section_name][assignment.strip()].update({"duration" : parts[2].strip()})
+                continue
+
         if line.startswith(r"\section"):
             section_name = line.split("{")[1].split("}")[0]
             subsection_name = ''
