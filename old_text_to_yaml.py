@@ -34,8 +34,10 @@ def convert_tex_to_yaml(filepath: Path):
             parts = line.split("{")[1:]
             parts = [part.split("}")[0] for part in parts]
             while line.endswith(r"\\"):
+                parts[-1] = parts[-1].rstrip(r"\\")
                 line = next(lines_iterator)
                 parts.append(line)
+            parts[-1] = parts[-1].rstrip(r"\}")
             
             parts = list(filter(None, parts))
 
@@ -45,10 +47,14 @@ def convert_tex_to_yaml(filepath: Path):
             elif section_name == "Experience" or section_name == "Experiencia":
                 if subsection_name and subsection_name == "Teaching and Mentoring Experience" or subsection_name == "Docencia y Formación":
                     title, content_to_save = parse_education(parts)
+                else:
+                    title, content_to_save = parse_education(parts)
                 
             elif section_name == "Production" or section_name == "Producción":
                 if subsection_name and subsection_name == "Publications" or subsection_name == "Publicaciones":
                     title, content_to_save = parse_publications(parts)
+                elif subsection_name and subsection_name == "Posters and Oral Presentations" or subsection_name == "Posters y Presentaciones Orales":
+                    title, content_to_save = parse_posters(parts)
                 
             elif len(parts) >= 4:
                 date, title, location, description = parts[:4]
@@ -63,6 +69,7 @@ def convert_tex_to_yaml(filepath: Path):
                 content_dict[section_name][subsection_name][title] = content_to_save
             else:
                 content_dict[section_name][title] = content_to_save
+            continue
         
         if line and not line.startswith("\\") and not line.startswith("%"):
             if section_name in content_dict:
@@ -169,6 +176,31 @@ def parse_publications(parts):
         content = {
             "date": date.strip(),
             "journal": journal.strip(),
+            "authors": authors.strip(),
+            "description": parts[4:] if len(parts) > 4 else [],
+        }
+    else:
+        print("Error: Unexpected number of parts in education entry.")
+        print(parts)
+        raise ValueError("Unexpected number of parts in education entry.")
+    return title, content
+
+
+def parse_posters(parts):
+    """
+    Parses the posters subsection from the LaTeX entry.
+
+    Args:
+        parts: The parts of the LaTeX entry.
+
+    Returns:
+        A tuple containing the title and content to save.
+    """
+    if len(parts) >= 4:
+        date, title, event, authors = parts[:4]
+        content = {
+            "date": date.strip(),
+            "event": event.strip(),
             "authors": authors.strip(),
             "description": parts[4:] if len(parts) > 4 else [],
         }
