@@ -63,6 +63,12 @@ def convert_tex_to_yaml(filepath: Path):
 
             elif section_name == "Participation in Conferences and Schools" or section_name == "Cursos y Congresos":
                 title, content_to_save = parse_course(parts)
+            
+            elif section_name == "Languages" or section_name == "Idiomas":
+                if subsection_name and subsection_name == "International Exams" or subsection_name == "Exámenes Internacionales":
+                    title, content_to_save = parse_language_exam(parts)
+                else:
+                    title, content_to_save = parse_education(parts)
                 
             elif len(parts) >= 4:
                 date, title, location, description = parts[:4]
@@ -80,7 +86,17 @@ def convert_tex_to_yaml(filepath: Path):
             continue
         
         if line and not line.startswith("\\") and not line.startswith("%"):
-            if section_name in content_dict:
+            if section_name == "Languages" or section_name == "Idiomas":
+                if line.startswith(r"\cvitemwithcomment"):
+                    parts = line.split("{")[1:]
+                    parts = [part.split("}")[0] for part in parts]
+                    parts = list(filter(None, parts))
+                    if len(parts) >= 2:
+                        raise ValueError("Unexpected number of parts in languages entry.")
+                    content_dict[section_name][parts[0]] = {
+                        "level": parts[1].strip()
+                    }
+            elif section_name in content_dict:
                 content_dict[section_name].setdefault("free_text", []).append(line)
             continue
 
@@ -265,6 +281,29 @@ def parse_course(parts):
         print(parts)
         raise ValueError("Unexpected number of parts in education entry.")
     return title, content
+
+
+def parse_language_exam(parts):
+    """
+    Parses the languages subsection from the LaTeX entry.
+
+    Args:
+        parts: The parts of the LaTeX entry.
+
+    Returns:
+        A tuple containing the title and content to save.
+    """
+    if len(parts) >= 2:
+        date, exam = parts[:2]
+        content = {
+            "date": date.strip(),
+            "description": parts[2:] if len(parts) > 2 else [],
+        }
+    else:
+        print("Error: Unexpected number of parts in languages entry.")
+        print(parts)
+        raise ValueError("Unexpected number of parts in languages entry.")
+    return exam, content
 
 
 if __name__ == "__main__":
