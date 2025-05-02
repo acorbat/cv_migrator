@@ -27,6 +27,7 @@ def convert_tex_to_yaml(filepath: Path):
         
         if line.startswith(r"\subsection"):
             subsection_name = line.split("{")[1].split("}")[0]
+            content_dict[section_name][subsection_name] = {}
             continue
 
         if line.startswith(r"\cventry"):
@@ -40,30 +41,28 @@ def convert_tex_to_yaml(filepath: Path):
 
             if section_name == "Education" or section_name == "Educación":
                 title, content_to_save = parse_education(parts)
-                content_dict[section_name][title] = content_to_save
-                continue
-
-            if section_name == "Experience" or section_name == "Experiencia":
+                
+            elif section_name == "Experience" or section_name == "Experiencia":
                 if subsection_name and subsection_name == "Teaching and Mentoring Experience" or subsection_name == "Docencia y Formación":
                     title, content_to_save = parse_education(parts)
-                    content_dict[section_name][title] = content_to_save
-                    continue
-            
-            if section_name == "Production" or section_name == "Producción":
+                
+            elif section_name == "Production" or section_name == "Producción":
                 if subsection_name and subsection_name == "Publications" or subsection_name == "Publicaciones":
                     title, content_to_save = parse_publications(parts)
-                    content_dict[section_name][title] = content_to_save
-                    continue
-
-            if len(parts) >= 4:
+                
+            elif len(parts) >= 4:
                 date, title, location, description = parts[:4]
-                content_dict[section_name][title] = {
+                content_to_save = {
                     "date": date.strip(),
                     "location": location.strip(),
                     "description": description.strip(),
                     "extras": parts[4:] if len(parts) > 4 else [],
                 }
-            continue
+            
+            if subsection_name:
+                content_dict[section_name][subsection_name][title] = content_to_save
+            else:
+                content_dict[section_name][title] = content_to_save
         
         if line and not line.startswith("\\") and not line.startswith("%"):
             if section_name in content_dict:
