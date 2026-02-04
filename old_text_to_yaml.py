@@ -115,7 +115,7 @@ def convert_tex_to_yaml(filepath: Path):
                     parts = line.split("{")[1:]
                     parts = [part.split("}")[0] for part in parts]
                     parts = list(filter(None, parts))
-                    if len(parts) >= 2:
+                    if len(parts) < 2:
                         raise ValueError("Unexpected number of parts in languages entry.")
                     content_dict[section_name][parts[0]] = {
                         "level": parts[1].strip()
@@ -298,13 +298,13 @@ def parse_course(parts):
             "description": parts[5:] if len(parts) > 5 else [],
         }
     elif len(parts) == 4:
-        date, title, extension, location = parts[:5]
+        date, title, extension, location = parts[:4]
         content = {
             "name": title.strip(),
             "date": date.strip(),
             "extension": extension.strip(),
             "location": location.strip(),
-            "description": parts[5:] if len(parts) > 5 else [],
+            "description": parts[4:] if len(parts) > 4 else [],
         }
     else:
         print("Error: Unexpected number of parts in education entry.")
