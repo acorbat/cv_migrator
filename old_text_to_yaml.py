@@ -8,12 +8,29 @@ def convert_tex_to_yaml(filepath: Path):
         lines = file.readlines()
 
     def make_lines_iterator():
-        for line in lines:
-            line = latex_bold_to_markdown(line.strip())
-            line = latex_italics_to_markdown(line.strip())
-            line = latex_underline_to_markdown(line.strip())
-            line = latex_superscript_to_markdown(line.strip())
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+            line = latex_bold_to_markdown(line)
+            line = latex_italics_to_markdown(line)
+            line = latex_underline_to_markdown(line)
+            line = latex_superscript_to_markdown(line)
+            line = latex_hyperlink_to_markdown(line)
+            
+            # Handle multi-line hyperlink format: \href \\ url \\ text
+            if line.endswith(r'\href \\'):
+                line = line.rstrip(r'\href \\')
+                i += 1
+                if i < len(lines):
+                    url = lines[i].strip().rstrip(r'\\')
+                    i += 1
+                    if i < len(lines):
+                        link_text = lines[i].strip()
+                        # Create markdown link
+                        line = line.strip() + f' [{link_text}]({url})'
+            
             yield line.strip()
+            i += 1
     
     # Process the lines to extract key-value pairs
     content_dict = {}
@@ -55,15 +72,8 @@ def convert_tex_to_yaml(filepath: Path):
             continue
 
         if line.startswith(r"\cventry"):
-            parts = line.split("{")[1:]
-            parts = [part.split("}")[0] for part in parts]
-            while line.endswith(r"\\"):
-                parts[-1] = parts[-1].rstrip(r"\\")
-                line = next(lines_iterator)
-                parts.append(line)
-            parts[-1] = parts[-1].rstrip(r"\}")
-            
-            parts = list(filter(None, parts))
+            parts = extract_braced_groups(line, lines_iterator, expected=6)
+            parts = [part.strip() for part in parts if part.strip()]
 
             if section_name == "Education" or section_name == "Educación":
                 content_to_save = parse_education(parts)
@@ -190,6 +200,73 @@ def latex_superscript_to_markdown(latex_text: str) -> str:
     """
     markdown_text = re.sub(r'\$\^\{(.*?)\}\$', r'^\1^', latex_text)
     return markdown_text
+
+
+def latex_hyperlink_to_markdown(latex_text: str) -> str:
+    """
+    Replaces LaTeX hyperlink commands (\href{url}{text}) with Markdown link syntax ([text](url)).
+
+    Args:
+        latex_text: The LaTeX text string.
+
+    Returns:
+        The Markdown text string with hyperlinks converted.
+    """
+    # Convert \href{url}{text} to [text](url)
+    markdown_text = re.sub(r'\\href\{(.*?)\}\{(.*?)\}', r'[\2](\1)', latex_text)
+    return markdown_text
+
+
+def extract_braced_groups(first_line: str, lines_iterator, expected: int = 6) -> list[str]:
+    """
+    Extracts top-level braced groups from a LaTeX command, spanning lines if needed.
+    """
+    buffer = first_line
+    while True:
+        groups = parse_braced_groups(buffer)
+        if len(groups) >= expected:
+            return groups
+        try:
+            next_line = next(lines_iterator)
+        except StopIteration:
+            return groups
+        buffer = buffer.rstrip() + " " + next_line.strip()
+
+
+def parse_braced_groups(text: str) -> list[str]:
+    """
+    Parses top-level {..} groups while preserving nested braces inside a group.
+    """
+    groups: list[str] = []
+    current: list[str] = []
+    depth = 0
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if ch == "\\" and i + 1 < len(text) and text[i + 1] in "{}":
+            if depth > 0:
+                current.append(text[i + 1])
+            i += 2
+            continue
+        if ch == "{":
+            depth += 1
+            if depth == 1:
+                current = []
+            else:
+                current.append(ch)
+        elif ch == "}":
+            if depth == 1:
+                groups.append("".join(current))
+                current = []
+            elif depth > 1:
+                current.append(ch)
+            if depth > 0:
+                depth -= 1
+        else:
+            if depth > 0:
+                current.append(ch)
+        i += 1
+    return groups
 
 
 def parse_education(parts):
